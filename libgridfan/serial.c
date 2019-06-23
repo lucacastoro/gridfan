@@ -225,27 +225,52 @@ void serial_close( serial_t serial )
 	}
 }
 
-uint32_t serial_read( serial_t serial, void* buffer, uint32_t* buff_size )
+ssize_t serial_read( serial_t serial, void* buffer, size_t* buff_size , uint32_t timeout_ms )
 {
 	if( ( INVALID_SERIAL != serial ) && ( NULL != buffer ) && ( NULL != buff_size ) && ( 0 != *buff_size ) )
 	{
-		int32_t r = 0;
+		if( timeout_ms == NO_TIMEOUT )
+		{
+			int32_t r = 0;
 
-		if( !( 0 > ( r = read( serial, buffer, *buff_size ) ) ) )
-		{
-			*buff_size = (uint32_t)r;
-			return 1;
-		}
-		else
-		{
-			if( EAGAIN == errno )
+			if( !( 0 > ( r = read( serial, buffer, *buff_size ) ) ) )
 			{
-				*buff_size = 0;
+				*buff_size = (uint32_t)r;
 				return 1;
 			}
 			else
 			{
-				return 0;
+				if( EAGAIN == errno )
+				{
+					*buff_size = 0;
+					return 1;
+				}
+				else
+				{
+					return 0;
+				}
+			}
+		}
+		else
+		{
+			struct timeval tv;
+			fd_set rset;
+			tv.tv_sec = timeout_ms / 1000;
+			tv.tv_usec = ( timeout_ms % 1000 ) * 1000;
+			FD_ZERO(&rset);
+			FD_SET(serial, &rset);
+
+			const int x = select( serial + 1, &rset, NULL, NULL, &tv );
+
+			switch( x )
+			{
+				case -1:
+					return 0;
+				case 0:
+					errno = ETIME;
+					return TIMEOUT;
+				default:
+					return serial_read( serial, buffer, buff_size, NO_TIMEOUT );
 			}
 		}
 	}
@@ -253,20 +278,26 @@ uint32_t serial_read( serial_t serial, void* buffer, uint32_t* buff_size )
 	return 0;
 }
 
-uint32_t serial_write( serial_t serial, const void* buffer, uint32_t buff_size )
+ssize_t serial_write( serial_t serial, const void* buffer, size_t buff_size )
 {
-	return
-	(
-		( INVALID_SERIAL != serial ) &&
-		( NULL != buffer ) &&
-		( 0 != buff_size ) &&
-		( buff_size == write( serial, buffer, buff_size ) )
-	);
+  if( ( INVALID_SERIAL == serial ) ||
+      ( NULL == buffer ) ||
+      ( 0 == buff_size ) ) {
+    errno = EINVAL;
+    return -1;
+  }
+
+  return write( serial, buffer, buff_size );
+}
+
+void serial_flush( serial_t serial )
+{
+  fsync( serial );
 }
 
 #endif // segue codice multipiattaforma
 
-uint32_t serial_read_all( serial_t serial, void* buffer, uint32_t buff_size )
+size_t serial_read_all( serial_t serial, void* buffer, size_t buff_size , uint32_t timeout_ms )
 {
 	uint32_t tot = 0;
 	uint32_t   r = 0;
@@ -275,7 +306,7 @@ uint32_t serial_read_all( serial_t serial, void* buffer, uint32_t buff_size )
 	{
 		r = buff_size - tot;
 
-		if( !( serial_read( serial, ((uint8_t*)buffer) + tot, &r ) ) )
+		if( !( serial_read( serial, ((uint8_t*)buffer) + tot, &r, timeout_ms ) ) )
 		{
 			return 0;
 		}

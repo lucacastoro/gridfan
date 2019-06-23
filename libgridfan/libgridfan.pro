@@ -22,13 +22,11 @@ DEFINES += QT_DEPRECATED_WARNINGS
 # You can also select to disable deprecated APIs only up to a certain version of Qt.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
-INCLUDEPATH += $$PWD/../../utils
-
 SOURCES += \
-		libgridfan.cpp \
-		$$PWD/../../utils/util/serial.c
+    libgridfan.cpp \
+    serial.c
 
 HEADERS += \
-		libgridfan.h \
-		$$PWD/../../utils/util/serial.h \
-		$$PWD/../../utils/util/serial.hpp
+    libgridfan.hpp \
+    serial.h \
+    serial.hpp

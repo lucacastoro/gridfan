@@ -2,6 +2,7 @@
 #define SERIAL_H
 
 #include <stdint.h>
+#include <stdlib.h>
 
 #ifdef WIN32
 	#define WIN32_LEAN_AND_MEAN
@@ -34,6 +35,9 @@
 #define STOPBIT_ONE_HALF 2
 #define STOPBIT_TWO      3
 
+#define NO_TIMEOUT 0xFFFFFFFF
+#define TIMEOUT NO_TIMEOUT
+
 typedef struct serial_config_t
 {
 	uint32_t baudrate;
@@ -56,7 +60,7 @@ serial_t serial_open( const char* filename, const serial_config_t* settings );
 
 /**
  * @brief closes the "serial" serial file
- * @param com: the serial handle to close
+ * @param serial: the serial handle to close
  * @return nothing
 */
 void serial_close( serial_t serial );
@@ -64,30 +68,36 @@ void serial_close( serial_t serial );
 /**
  * @brief reads up to "buff_size" bytes from "serial" storing
  * them into "buffer" and writing the amount of bytes read into "buff_size"
- * @param com: the serial handle to read
+ * @param serial: the serial handle to read
  * @param buffer: the buffer where put the read data
  * @param buff_size: the maximum amount of data to read, will contain the amount of data actually read
  * @return 1 if succesfull, 0 otherwise
 */
-uint32_t serial_read( serial_t serial, void* buffer, uint32_t* buff_size );
+ssize_t serial_read( serial_t serial, void* buffer, size_t *buff_size, uint32_t timeout_ms );
 
 /**
  * @brief reads exactly "buff_size" bytes from "serial" storing them into "buffer"
- * @param com: the serial handle to read
+ * @param serial: the serial handle to read
  * @param buffer: the buffer where put the read data
  * @param buff_size: the amount of data to read
  * @return 1 if succesfull, 0 otherwise
 */
-uint32_t serial_read_all( serial_t serial, void* buffer, uint32_t buff_size );
+size_t serial_read_all( serial_t serial, void* buffer, size_t buff_size, uint32_t timeout_ms );
 
 /**
  * @brief writes "buff_size" bytes to "serial" reading them from "buffer"
- * @param com: the serial handle to read
+ * @param serial: the serial handle to read
  * @param buffer: the buffer containing the data to write
  * @param buff_size: the amount of bytes to write
  * @return 1 if succesfull, 0 otherwise
 */
-uint32_t serial_write( serial_t serial, const void* buffer, uint32_t buff_size );
+ssize_t serial_write( serial_t serial, const void* buffer, size_t buff_size );
+
+/**
+ * @brief flushes any cached data to the serial
+ * @param serial: the serial handle to flush
+*/
+void serial_flush( serial_t serial );
 
 /**
  * @brief configures "settings" in the common 8-N-1 mode
