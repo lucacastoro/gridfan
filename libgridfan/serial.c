@@ -190,29 +190,27 @@ serial_t serial_open(const char* filename, const serial_config_t* settings )
 
 	serial = open( filename, O_RDWR | O_NOCTTY | O_NDELAY );
 
-	if( -1 != serial )
-	{
-		struct termios config;
-		memset( &config, 0, sizeof(config) );
-		config.c_iflag = 0;
-		config.c_oflag = 0;
-		config.c_cflag = databits | parity | stopbits | CREAD | CLOCAL ;
-		config.c_lflag = 0;
-		config.c_cc[VMIN] = 1;
-		config.c_cc[VTIME] = READ_TIMEOUT_MS / 100;
+  if( -1 == serial )
+  {
+    return INVALID_SERIAL;
+  }
 
-		if( 0 != cfsetospeed( &config, speed ) ||
-			0 != cfsetispeed( &config, speed ) ||
-			0 != tcsetattr( serial, TCSANOW, &config ) )
-		{
-			close( serial );
-			return INVALID_SERIAL;
-		}
-	}
-	else
-	{
-		return INVALID_SERIAL;
-	}
+  struct termios config;
+  memset( &config, 0, sizeof(config) );
+  config.c_iflag = 0;
+  config.c_oflag = 0;
+  config.c_cflag = databits | parity | stopbits | CREAD | CLOCAL ;
+  config.c_lflag = 0;
+  config.c_cc[VMIN] = 1;
+  config.c_cc[VTIME] = READ_TIMEOUT_MS / 100;
+
+  if( 0 != cfsetospeed( &config, speed ) ||
+    0 != cfsetispeed( &config, speed ) ||
+    0 != tcsetattr( serial, TCSANOW, &config ) )
+  {
+    close( serial );
+    return INVALID_SERIAL;
+  }
 
 	return serial;
 }
@@ -225,15 +223,15 @@ void serial_close( serial_t serial )
 	}
 }
 
-ssize_t serial_read( serial_t serial, void* buffer, size_t* buff_size , uint32_t timeout_ms )
+size_t serial_read( serial_t serial, void* buffer, size_t* buff_size , uint32_t timeout_ms )
 {
 	if( ( INVALID_SERIAL != serial ) && ( NULL != buffer ) && ( NULL != buff_size ) && ( 0 != *buff_size ) )
 	{
 		if( timeout_ms == NO_TIMEOUT )
 		{
-			int32_t r = 0;
+      const ssize_t r = read( serial, buffer, *buff_size );
 
-			if( !( 0 > ( r = read( serial, buffer, *buff_size ) ) ) )
+      if( r > 0 )
 			{
 				*buff_size = (uint32_t)r;
 				return 1;
@@ -299,8 +297,8 @@ void serial_flush( serial_t serial )
 
 size_t serial_read_all( serial_t serial, void* buffer, size_t buff_size , uint32_t timeout_ms )
 {
-	uint32_t tot = 0;
-	uint32_t   r = 0;
+  size_t tot = 0;
+  size_t   r = 0;
 
 	do
 	{

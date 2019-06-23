@@ -30,22 +30,22 @@ namespace temperature {
     return value;
   }
 
-  double sensor::getTemp() const
+  double sensor::temperature() const
   {
     return get( SENSORS_SUBFEATURE_TEMP_INPUT );
   }
 
-  double sensor::getHigh() const 
+  double sensor::high() const
   {
     return get( SENSORS_SUBFEATURE_TEMP_MAX );
   }
 
-  double sensor::getCrit() const
+  double sensor::crit() const
   {
     return get( SENSORS_SUBFEATURE_TEMP_CRIT );
   }
 
-  std::string sensor::getName() const
+  std::string sensor::name() const
   {
     auto label = sensors_get_label( chip, fea );
 

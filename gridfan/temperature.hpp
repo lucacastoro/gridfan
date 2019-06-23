@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <string>
+#include <algorithm>
 #include <sensors/sensors.h>
 
 namespace temperature {
@@ -10,10 +11,10 @@ namespace temperature {
   class sensor {
   public:
     sensor( const sensors_chip_name* c, const sensors_feature* f );
-    double getTemp() const;
-    double getHigh() const;
-    double getCrit() const;
-    std::string getName() const;
+    double temperature() const;
+    double high() const;
+    double crit() const;
+    std::string name() const;
   private:
     double get( sensors_subfeature_type tp ) const;
     const sensors_chip_name* chip;
@@ -42,7 +43,16 @@ namespace temperature {
     iterator begin();
     iterator end();
     const_iterator begin() const;
-    const_iterator end() const; 
+    const_iterator end() const;
+
+    const_iterator find(const std::string& name) const {
+      return std::find_if(
+          begin(),
+          end(),
+            [&name](const auto& sensor){
+            return sensor.name() == name;
+        });
+    }
 
   private:
     static size_t ref_count;

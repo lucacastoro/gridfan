@@ -8,10 +8,11 @@
 #include <csignal>
 #include <unordered_map>
 #include <numeric>
-
+#include <syslog.h>
 #include "temperature.cpp"
 #include "libgridfan.hpp"
 
+using namespace std::chrono;
 using namespace std::chrono_literals;
 
 static bool stop = false;
@@ -24,33 +25,54 @@ static T clamp( const T& min, const T& max, const T& val ) {
   return std::min( max, std::max( min, val ) );
 }
 
-int main( int argc, char* argv[] ) {
+class Syslog final {
+public:
+  inline Syslog() { openlog(nullptr, 0, 0); }
+  inline ~Syslog() { closelog(); }
+  template <typename ...Args>
+  inline void info(const Args& ...args) {
+    log(LOG_INFO, args...);
+  }
+  template <typename ...Args>
+  inline void error(const Args& ...args) {
+    log(LOG_ERR, args...);
+  }
+private:
+  template <typename ...Args>
+  inline void log(int pri, const Args& ...args) {
+    syslog(pri, args...);
+  }
+};
+
+int main() {
 
   signal( SIGINT, &sig_handler );
   signal( SIGQUIT, &sig_handler );
 
+  Syslog log;
+
   grid::controller controller;
 
   if( not controller ) {
-    std::cerr << "no controller" << std::endl;
+    log.error("cannot access the fan controller");
     return 1;
   }
 
   temperature::monitor monitor;
 
   if( not monitor ) {
-    std::cerr << "no monitor" << std::endl;
+    log.error("cannot access the temperature monitor");
     return 1;
   }
 
-  const auto cpu = std::find_if(monitor.begin(), monitor.end(), [](const temperature::sensor& sensor){
-    return sensor.getName() == "CPU Temperature";
-  });
+  const auto cpu = monitor.find("CPU Temperature");
 
   if( cpu == monitor.end()) {
-    std::cerr << "could not find CPU temperature" << std::endl;
+    log.error("cannot find the CPU temperature sensor");
     return 1;
   }
+
+  log.info("started");
 
   // maps temp. to speed percentage: 25C = 0%, 70C = 100%
   const auto func = []( double temp ) -> int {
@@ -59,12 +81,12 @@ int main( int argc, char* argv[] ) {
     return clamp( 0, 100, int( ( temp - min ) * 100.0 / ( max - min ) ) );
   };
 
-  static constexpr auto interval = 1s;
+  static constexpr milliseconds interval = 1s;
   int last_p = -1;
 
   while( not stop ) {
 
-    const auto t = cpu->getTemp();
+    const auto t = cpu->temperature();
     const auto p = func( t );
 
     // changes in fan speed are triggered only if
@@ -80,13 +102,18 @@ int main( int argc, char* argv[] ) {
         last_p = p;
       }
 
-      std::cout << "setting speed to " << last_p << "%" << std::endl;
+      log.info("setting fans speed to %d%%", last_p);
 
       for (auto& fan : controller) {
         fan.setPercent( last_p );
       }
     }
 
-    std::this_thread::sleep_for(interval);
+    for (size_t i = 0; i < 10; ++i) {
+      std::this_thread::sleep_for(interval / 10);
+      if (stop) break;
+    }
   }
+
+  log.info("terminated");
 }

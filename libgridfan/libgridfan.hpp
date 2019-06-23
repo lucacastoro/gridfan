@@ -27,7 +27,6 @@ namespace grid
     int getSpeed( const std::chrono::milliseconds &timeout = 500ms ) const noexcept(false);
     int getUnknown1( const std::chrono::milliseconds &timeout = 500ms ) const noexcept(false);
     int getUnknown2( const std::chrono::milliseconds &timeout = 500ms ) const noexcept(false);
-//		int getPercent() const;
     void setPercent( int );
 
 	private:

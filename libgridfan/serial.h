@@ -73,7 +73,7 @@ void serial_close( serial_t serial );
  * @param buff_size: the maximum amount of data to read, will contain the amount of data actually read
  * @return 1 if succesfull, 0 otherwise
 */
-ssize_t serial_read( serial_t serial, void* buffer, size_t *buff_size, uint32_t timeout_ms );
+size_t serial_read( serial_t serial, void* buffer, size_t *buff_size, uint32_t timeout_ms );
 
 /**
  * @brief reads exactly "buff_size" bytes from "serial" storing them into "buffer"
