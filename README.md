@@ -6,12 +6,12 @@ This is a C/C++ implementation of [CapitalF work](https://github.com/CapitalF/gr
 It is composed of 2 parts, a dynamic library `libgridfan.so` exposing the actual functionalities of the fan bus and the binary itself `gridfan` that uses the library to interact with it.
 
 ### Q/A
-Q: Why the serial file implementation is in C?
-A: I reused a very old library I wrote years ago when I used to play around with Arduino, at the time C89 was my language of choice.
-Q: And why there is a Win32 implementation as well?
-A: Because at the time I was still mostly a Windows user.
-Q: Does this thing work on Win32 as well?
-A: No, libsensors (see below the [Dependencies](#deps) section) is not available on Windows (AFAICT). Maybe it could be possible to build the project using [MinGW](http://www.mingw.org/) but I haven't tried.
+- Q: Why the serial file implementation is in C?
+- A: I reused an old library I wrote years ago when I used to play around with Arduino, at the time C89 was my language of choice.
+- Q: And why there is a Win32 implementation as well?
+- A: Because at the time I was still mostly a Windows user.
+- Q: Does this thing work on Win32 as well?
+- A: No, `libsensors` (see below the [Dependencies](#deps) section) is not available on Windows (AFAICT). Maybe it could be possible to build the project using [MinGW](http://www.mingw.org/) but I haven't tried.
 
 ## Requirements
 - A C++14 compiler (gcc 5 or clang 3.4 should work).
@@ -20,7 +20,7 @@ A: No, libsensors (see below the [Dependencies](#deps) section) is not available
 ## <a name="deps"></a> Dependencies
 - Te project uses [libsensors](https://linux.die.net/man/3/libsensors) to query system temperatures.
 
-On Ubuntu 18.04 the library can be installed through `sudo apt install -y libsensors4-dev` on CentOS/RHEL something like `yum install -y lm_sensors-devel` should work.
+On Ubuntu 18.04 the library can be installed through `sudo apt install -y libsensors4-dev`, on CentOS/RHEL something like `yum install -y lm_sensors-devel` should work.
 
 ## Building
 This is a simple "typical" CMake project so it should be enough to:
