@@ -1,0 +1,16 @@
+# /lib/systemd/system/gridfan.service
+[Unit]
+Description=NZXT Grid v2 controller daemon
+Documentation=https://github.com/lucastoro/gridfan
+
+[Service]
+Type=simple
+Environment=LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
+ExecStart=/usr/local/bin/gridfan 
+TimeoutSec=0
+RestartSec=2
+Restart=always
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target

@@ -48,6 +48,7 @@ int main() {
 
   signal( SIGINT, &sig_handler );
   signal( SIGQUIT, &sig_handler );
+  signal( SIGTERM, &sig_handler );
 
   Syslog log;
 

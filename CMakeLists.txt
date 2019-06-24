@@ -3,6 +3,7 @@ project(gridfan)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+set(SYSTEMD_DIR /etc/systemd/system/)
 
 find_library(LIBSENSORS sensors)
 
@@ -12,3 +13,4 @@ endif()
 
 add_subdirectory(libgridfan)
 add_subdirectory(gridfan)
+install(FILES gridfan.service DESTINATION ${SYSTEMD_DIR})
