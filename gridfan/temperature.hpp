@@ -45,7 +45,7 @@ namespace temperature {
     const_iterator begin() const;
     const_iterator end() const;
 
-    const_iterator find(const std::string& name) const {
+    inline const_iterator find(const std::string& name) const {
       return std::find_if(
           begin(),
           end(),

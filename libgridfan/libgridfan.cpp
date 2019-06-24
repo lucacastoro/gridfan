@@ -22,12 +22,12 @@ namespace grid {
   controller::controller( const std::string& filename ) noexcept(false)
     : file( filename.c_str(), serial::configuration::make8N1( 4800 ) )
 	{
-		if( not file )
+    if( not file )
       throw std::runtime_error("Could not access " + filename);
 
     init( 5s );
 
-		for( size_t i = 0; i < fans.size(); ++i )
+    for( size_t i = 0; i < fans.size(); ++i )
       fans[ i ] = fan( file, i + 1 );
 	}
 

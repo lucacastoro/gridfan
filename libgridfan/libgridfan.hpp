@@ -69,16 +69,6 @@ namespace grid
     result_t init(const std::chrono::milliseconds& timeout );
     result_t ping( const std::chrono::milliseconds& timeout );
 
-		template <typename duration_t>
-		typename std::enable_if<not std::is_same<duration_t, std::chrono::milliseconds>::value>::type
-		inline init( const duration_t& timeout )
-		{ init( std::chrono::duration_cast<std::chrono::milliseconds>( timeout ) ); }
-
-		template <typename duration_t>
-		typename std::enable_if<not std::is_same<duration_t, std::chrono::milliseconds>::value>::type
-		inline ping( const duration_t& timeout )
-		{ ping( std::chrono::duration_cast<std::chrono::milliseconds>( timeout ) ); }
-
     std::array<fan,6> fans;
     serial::file file;
 	};

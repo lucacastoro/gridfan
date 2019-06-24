@@ -9,7 +9,7 @@
 #include <unordered_map>
 #include <numeric>
 #include <syslog.h>
-#include "temperature.cpp"
+#include "temperature.hpp"
 #include "libgridfan.hpp"
 
 using namespace std::chrono;
