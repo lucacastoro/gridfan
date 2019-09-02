@@ -62,6 +62,7 @@ serial_t serial_open( const char* filename, const serial_config_t* settings );
  * @brief closes the "serial" serial file
  * @param serial: the serial handle to close
  * @return nothing
+ * @note it is safe to "close" an invalid handle "INVALID_SERIAL"
 */
 void serial_close( serial_t serial );
 
@@ -91,13 +92,7 @@ size_t serial_read_all( serial_t serial, void* buffer, size_t buff_size, uint32_
  * @param buff_size: the amount of bytes to write
  * @return 1 if succesfull, 0 otherwise
 */
-ssize_t serial_write( serial_t serial, const void* buffer, size_t buff_size );
-
-/**
- * @brief flushes any cached data to the serial
- * @param serial: the serial handle to flush
-*/
-void serial_flush( serial_t serial );
+size_t serial_write( serial_t serial, const void* buffer, size_t buff_size );
 
 /**
  * @brief configures "settings" in the common 8-N-1 mode

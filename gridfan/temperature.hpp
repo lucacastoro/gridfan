@@ -24,15 +24,15 @@ namespace temperature {
   class monitor final {
   public:
 
-    monitor();
-    ~monitor();
+    monitor() noexcept;
+    ~monitor() noexcept;
 
     explicit operator bool() const;
 
     const char* version() const;
 
-    size_t size() const;
-    bool empty() const;
+    size_t size() const noexcept;
+    bool empty() const noexcept;
 
     typedef std::vector<sensor>::iterator iterator;
     typedef std::vector<sensor>::const_iterator const_iterator;
@@ -40,10 +40,10 @@ namespace temperature {
     const sensor& operator [] ( size_t ) const;
     sensor& operator [] ( size_t );
 
-    iterator begin();
-    iterator end();
-    const_iterator begin() const;
-    const_iterator end() const;
+    iterator begin() noexcept;
+    iterator end() noexcept;
+    const_iterator begin() const noexcept;
+    const_iterator end() const noexcept;
 
     inline const_iterator find(const std::string& name) const {
       return std::find_if(
@@ -59,7 +59,7 @@ namespace temperature {
     std::vector<sensor> sensors;
   };
 
-  monitor& global_monitor();
+  monitor& global_monitor() noexcept;
 }
 
 #endif // TEMPERATURE_H

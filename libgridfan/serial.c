@@ -205,8 +205,8 @@ serial_t serial_open(const char* filename, const serial_config_t* settings )
   config.c_cc[VTIME] = READ_TIMEOUT_MS / 100;
 
   if( 0 != cfsetospeed( &config, speed ) ||
-    0 != cfsetispeed( &config, speed ) ||
-    0 != tcsetattr( serial, TCSANOW, &config ) )
+      0 != cfsetispeed( &config, speed ) ||
+      0 != tcsetattr( serial, TCSANOW, &config ) )
   {
     close( serial );
     return INVALID_SERIAL;
@@ -225,72 +225,91 @@ void serial_close( serial_t serial )
 
 size_t serial_read( serial_t serial, void* buffer, size_t* buff_size , uint32_t timeout_ms )
 {
-	if( ( INVALID_SERIAL != serial ) && ( NULL != buffer ) && ( NULL != buff_size ) && ( 0 != *buff_size ) )
+  if( ( INVALID_SERIAL == serial ) ||
+      ( NULL == buffer ) ||
+      ( NULL == buff_size ) ||
+      ( 0 == *buff_size ) )
 	{
-		if( timeout_ms == NO_TIMEOUT )
-		{
+    errno = EINVAL;
+  }
+  else
+  {
+    if( NO_TIMEOUT == timeout_ms )
+    {
       const ssize_t r = read( serial, buffer, *buff_size );
 
       if( r > 0 )
-			{
-				*buff_size = (uint32_t)r;
-				return 1;
-			}
-			else
-			{
-				if( EAGAIN == errno )
-				{
-					*buff_size = 0;
-					return 1;
-				}
-				else
-				{
-					return 0;
-				}
-			}
-		}
-		else
-		{
-			struct timeval tv;
-			fd_set rset;
-			tv.tv_sec = timeout_ms / 1000;
-			tv.tv_usec = ( timeout_ms % 1000 ) * 1000;
-			FD_ZERO(&rset);
-			FD_SET(serial, &rset);
+      {
+        *buff_size = (uint32_t)r;
+        return 1;
+      }
+      else
+      {
+        if( EAGAIN == errno )
+        {
+          *buff_size = 0;
+          return 1;
+        }
+      }
+    }
+    else
+    {
+      const clock_t now = clock();
+      struct timeval tv;
+      fd_set rset;
+      tv.tv_sec = timeout_ms / 1000;
+      tv.tv_usec = ( timeout_ms % 1000 ) * 1000;
+      FD_ZERO(&rset);
+      FD_SET(serial, &rset);
 
-			const int x = select( serial + 1, &rset, NULL, NULL, &tv );
+      const int x = select( serial + 1, &rset, NULL, NULL, &tv );
 
-			switch( x )
-			{
-				case -1:
-					return 0;
-				case 0:
-					errno = ETIME;
-					return TIMEOUT;
-				default:
-					return serial_read( serial, buffer, buff_size, NO_TIMEOUT );
-			}
-		}
-	}
+      switch( x )
+      {
+        case -1:
+          if(EAGAIN == errno)
+          {
+            const uint32_t ms = (uint32_t)(clock() - now) * 1000 / CLOCKS_PER_SEC;
+            return serial_read( serial, buffer, buff_size, timeout_ms - ms );
+          }
+          break;
+        case 0:
+          errno = ETIME;
+          break;
+        default:
+          return serial_read( serial, buffer, buff_size, NO_TIMEOUT );
+      }
+    }
+  }
 
 	return 0;
 }
 
-ssize_t serial_write( serial_t serial, const void* buffer, size_t buff_size )
+size_t serial_write( serial_t serial, const void* buffer, size_t buff_size )
 {
   if( ( INVALID_SERIAL == serial ) ||
       ( NULL == buffer ) ||
       ( 0 == buff_size ) ) {
     errno = EINVAL;
-    return -1;
+    return 0;
   }
+  else
+  {
+    ssize_t tot = 0;
 
-  return write( serial, buffer, buff_size );
-}
+    while( tot != (ssize_t)buff_size )
+    {
+      const ssize_t w = write( serial, ((const uint8_t*)buffer) + tot, buff_size - (size_t)tot );
 
-void serial_flush( serial_t serial )
-{
-  fsync( serial );
+      if( w < 1 )
+      {
+        return 0;
+      }
+
+      tot += w;
+    }
+  }
+  return 1;
 }
 
 #endif // segue codice multipiattaforma

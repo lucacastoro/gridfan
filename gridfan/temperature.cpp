@@ -64,7 +64,7 @@ namespace temperature {
 
   static monitor* g_monitor = nullptr;
 
-  monitor::monitor()
+  monitor::monitor() noexcept
   {
     if( 0 == ref_count++ )
     {
@@ -102,7 +102,7 @@ namespace temperature {
     return libsensors_version;
   }
 
-  monitor::~monitor()
+  monitor::~monitor() noexcept
   {
     if( ref_count and 0 == --ref_count )
     {
@@ -111,9 +111,9 @@ namespace temperature {
     }
   }
   
-  size_t monitor::size() const
+  size_t monitor::size() const  noexcept
   { return sensors.size(); }
-  bool monitor::empty() const
+  bool monitor::empty() const  noexcept
   { return sensors.empty(); }
 
   const sensor& monitor::operator [] ( size_t index ) const
@@ -122,16 +122,16 @@ namespace temperature {
   sensor& monitor::operator [] ( size_t index )
   { return sensors[ index ]; }
 
-  monitor::iterator monitor::begin()
+  monitor::iterator monitor::begin() noexcept
   { return sensors.begin(); }
-  monitor::iterator monitor::end()
+  monitor::iterator monitor::end() noexcept
   { return sensors.end(); }
-  monitor::const_iterator monitor::begin() const
+  monitor::const_iterator monitor::begin() const noexcept
   { return sensors.begin(); }
-  monitor::const_iterator monitor::end() const
+  monitor::const_iterator monitor::end() const noexcept
   { return sensors.end(); }
 
-  monitor& global_monitor()
+  monitor& global_monitor() noexcept
   {
     return *g_monitor;
   }

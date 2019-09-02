@@ -21,15 +21,13 @@ namespace serial
 	typedef uint32_t databits_t;
 	typedef float stopbits_t;
 
-	enum parity {
+  enum class parity_t {
 		none  = PARITY_NONE,
 		odd   = PARITY_ODD,
 		even  = PARITY_EVEN,
 		mark  = PARITY_MARK,
 		space = PARITY_SPACE
 	};
-
-	typedef parity parity_t;
 
 	class configuration
 	{
@@ -46,7 +44,7 @@ namespace serial
 
 		configuration& parity( parity_t parity )
 		{
-			config.parity = parity;
+      config.parity = uint32_t(parity);
 			return *this;
 		}
 
@@ -92,14 +90,26 @@ namespace serial
 
 		static configuration make8N1( baudrate_t brate )
 		{
-			return configuration().databits( 8 ).parity( serial::parity::none ).stopbits( 1 ).baudrate( brate );
+      return configuration()
+          .databits( 8 )
+          .parity( serial::parity_t::none )
+          .stopbits( 1 )
+          .baudrate( brate );
 		}
 
 	private:
 
-		static bool almost( float a, float b, float delta = 0.01F )
+    static bool almost( float a, float b, float delta = -1.0F )
 		{
-			return std::abs( a - b ) < delta;
+      const auto diff = std::abs( a - b );
+
+      if( 0.0 == diff )
+        return true;
+
+      if( delta < 0.0F )
+        delta = diff / 100.0F;
+
+      return delta > diff;
 		}
 
 		serial_config_t config;
@@ -121,6 +131,7 @@ namespace serial
 	};
 
   static constexpr auto infinite = std::chrono::milliseconds::max();
+  static constexpr auto use_global = std::chrono::milliseconds::min();
 
 	class file
 	{
@@ -134,6 +145,7 @@ namespace serial
 
 		file( const char* filename, const configuration& config ) noexcept
 			: handle( serial_open( filename, *config ) )
+      , timeout(infinite)
 		{}
 
 		file( file&& other ) noexcept
@@ -147,21 +159,23 @@ namespace serial
       const std::lock_guard<std::mutex> lock1( mutex );
       const std::lock_guard<std::mutex> lock2( other.mutex );
 
-			if( this == &other ) return *this;
-			if( *this ) serial_close( handle );
-			this->handle = other.handle;
-			other.handle = INVALID_SERIAL;
+      if( this != &other )
+      {
+        serial_close( handle );
+        this->handle = other.handle;
+        this->last_read = other.last_read;
+        this->last_write = other.last_write;
+        this->timeout = other.timeout;
+        other.handle = INVALID_SERIAL;
+      }
+
 			return *this;
 		}
 
-		virtual ~file()
+    virtual ~file() noexcept
 		{
       const std::lock_guard<std::mutex> lock( mutex );
-
-			if( *this )
-			{
-				serial_close( handle );
-			}
+      serial_close( handle );
 		}
 
 		explicit operator bool () const noexcept
@@ -170,10 +184,13 @@ namespace serial
 		bool write( const void* data, size_t count ) noexcept
 		{
       const std::lock_guard<std::mutex> lock( mutex );
-      last_access = clock::now();
-      const ssize_t w = serial_write( handle, data, count );
-      if( size_t(w) == count )
+
+      const auto success = serial_write( handle, data, count );
+      last_write = clock::now();
+
+      if( success )
         return true;
+
       std::cerr << "serial::write error: " << strerror(errno) << std::endl;
       return false;
 		}
@@ -184,55 +201,51 @@ namespace serial
 		bool write( const std::string& string ) noexcept
 		{ return write( string.c_str(), string.size() ); }
 
-		read_result read( void* data, size_t count, const std::chrono::milliseconds& timeout = infinite ) noexcept
+    read_result read( void* data, size_t count, const std::chrono::milliseconds& to = use_global ) noexcept
 		{
       const std::lock_guard<std::mutex> lock( mutex );
 
 			if( timeout < 0s )
-			{
-				errno = ETIME;
 				return read_result::failure( read_result::timeout );
-			}
 
-      last_access = clock::now();
+      const auto x = to == use_global ? timeout : to;
 
-			const auto x = serial_read( handle, data, &count, timeout == infinite ? NO_TIMEOUT : uint32_t( timeout.count() ) );
+      const auto success = serial_read( handle, data, &count, x == infinite ? NO_TIMEOUT : uint32_t( x.count() ) );
 
-			switch( x )
-			{
-				case TIMEOUT:
-					return read_result::failure( read_result::timeout );
-				case 0:
-					return read_result::failure( read_result::error );
-				default:
-					return read_result::success( count );
-			}
+      last_read = clock::now();
+
+      if (success)
+        return read_result::success( count );
+
+      if(ETIME == errno)
+        return read_result::failure( read_result::timeout );
+
+      return read_result::failure( read_result::error );
 		}
 
-    read_result read_all( void* data, size_t count, const std::chrono::milliseconds& timeout = infinite ) noexcept
+    read_result read_all( void* data, size_t count, const std::chrono::milliseconds& to = use_global ) noexcept
 		{
       const std::lock_guard<std::mutex> lock( mutex );
 
 			if( timeout.count() < 0 )
-			{
 				return read_result::failure( read_result::timeout );
-			}
 
-      last_access = clock::now();
+      const auto x = to == use_global ? timeout : to;
 
-			switch( serial_read_all( handle, data, count, timeout == infinite ? NO_TIMEOUT : uint32_t( timeout.count() ) ) )
-			{
-				case TIMEOUT:
-					return read_result::failure( read_result::timeout );
-				case 0:
-					return read_result::failure( read_result::error );
-				default:
-					return read_result::success( count );
-			}
+      const auto success = serial_read_all( handle, data, count, x == infinite ? NO_TIMEOUT : uint32_t( x.count() ) );
+      last_read = clock::now();
+
+      if (success)
+        return read_result::success( count );
+
+      if(ETIME == errno)
+        return read_result::failure( read_result::timeout );
+
+      return read_result::failure( read_result::error );
 		}
 
 		template<typename type_t>
-		inline file& write( const type_t& some )
+    inline file& write( const type_t& some ) noexcept(false)
 		{
 			if( not write( &some, sizeof(some) ) )
 				throw std::runtime_error( strerror( errno ) );
@@ -241,7 +254,7 @@ namespace serial
 
 		template<typename type_t>
 		typename std::enable_if<std::is_trivially_copyable<type_t>::value, file&>::type
-		inline read( type_t& some, const std::chrono::milliseconds& timeout = infinite )
+    inline read( type_t& some, const std::chrono::milliseconds& timeout = use_global ) noexcept(false)
 		{
 			if( not read_all( &some, sizeof(some), timeout ) )
 				throw std::runtime_error( strerror( errno ) );
@@ -250,33 +263,51 @@ namespace serial
 
 		template<typename type_t>
 		typename std::enable_if<std::is_trivially_copyable<type_t>::value, type_t>::type
-		inline read( const std::chrono::milliseconds& timeout = infinite )
+    inline read( const std::chrono::milliseconds& timeout = use_global ) noexcept(false)
 		{
 			type_t some;
-			read( some, timeout );
+      if( not read( some, timeout ) )
+        throw std::runtime_error( strerror( errno ) );
 			return some;
 		}
 
 		template<typename type_t>
-		inline file& operator << ( const type_t& some )
+    inline file& operator << ( const type_t& some ) noexcept(false)
 		{
 			return write( some );
 		}
 
 		template<typename type_t>
-		inline file& operator >> ( type_t& some )
+    inline file& operator >> ( type_t& some ) noexcept(false)
 		{
 			return read( some );
 		}
 
-    inline void flush()
+    clock::time_point get_last_read() const noexcept
     {
-      serial_flush( handle );
+      return last_read;
     }
 
-    clock::time_point get_last_access() const
+    clock::time_point get_last_write() const noexcept
     {
-      return last_access;
+      return last_write;
+    }
+
+    clock::time_point get_last_access() const noexcept
+    {
+      return std::max(last_read, last_write);
+    }
+
+    void set_timeout( const std::chrono::milliseconds& to )
+    {
+      const std::lock_guard<std::mutex> lock( mutex );
+      timeout = to;
+    }
+
+    const std::chrono::milliseconds& get_timeout() const
+    {
+      const std::lock_guard<std::mutex> lock( mutex );
+      return timeout;
     }
 
 	private:
@@ -285,8 +316,10 @@ namespace serial
 		file& operator = ( const file& ) = delete;
 
 		serial_t handle;
-		std::mutex mutex;
-    clock::time_point last_access;
+    mutable std::mutex mutex;
+    std::chrono::milliseconds timeout;
+    clock::time_point last_read;
+    clock::time_point last_write;
 	};
 }
 

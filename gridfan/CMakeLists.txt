@@ -1,6 +1,6 @@
-cmake_minimum_required(VERSION 3.8) # CMAKE_CXX_STANDARD = 17 requires CMake 3.8
+cmake_minimum_required(VERSION 3.1.3)
 project(gridfan)
-set(CMAKE_CXX_STANDARD 14) 
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON) 
 set(CMAKE_CXX_EXTENSIONS OFF)
 

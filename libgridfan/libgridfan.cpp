@@ -27,6 +27,8 @@ namespace grid {
 
     init( 5s );
 
+    file.set_timeout(5s);
+
     for( size_t i = 0; i < fans.size(); ++i )
       fans[ i ] = fan( file, i + 1 );
 	}
