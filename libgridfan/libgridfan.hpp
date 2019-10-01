@@ -41,6 +41,7 @@ namespace grid
 	{
 	public:
     explicit controller(const std::string& filename = "/dev/GridPlus0" ) noexcept(false);
+    explicit controller(std::nothrow_t, const std::string& filename = "/dev/GridPlus0") noexcept(false);
 
     enum class result_t { ok, timeout, invalid_data };
 

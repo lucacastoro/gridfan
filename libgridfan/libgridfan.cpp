@@ -19,18 +19,31 @@ namespace grid {
   static constexpr uint8_t GET_RPM     = 0x8A;
   static constexpr uint8_t SET_VOLTAGE = 0x44;
 
-  controller::controller( const std::string& filename ) noexcept(false)
+  controller::controller(std::nothrow_t, const std::string& filename) noexcept(false)
     : file( filename.c_str(), serial::configuration::make8N1( 4800 ) )
-	{
+  {
     if( not file )
-      throw std::runtime_error("Could not access " + filename);
+    {
+      return;
+    }
 
-    init( 5s );
+    if( result_t::ok != init( 5s ) )
+    {
+      file.close();
+      return;
+    }
 
     file.set_timeout(5s);
 
     for( size_t i = 0; i < fans.size(); ++i )
       fans[ i ] = fan( file, i + 1 );
+  }
+
+  controller::controller( const std::string& filename ) noexcept(false)
+    : controller(std::nothrow, filename)
+	{
+    if( not file )
+      throw std::runtime_error("Could not access " + filename);
 	}
 
 	controller::operator bool() const

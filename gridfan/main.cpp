@@ -9,10 +9,10 @@
 #include <csignal>
 #include <cmath>
 #include <ctime>
-#include <syslog.h>
 
 #include "temperature.hpp"
 #include "libgridfan.hpp"
+#include "logger.hpp"
 
 using namespace std::chrono;
 using namespace std::chrono_literals;
@@ -38,68 +38,10 @@ static std::chrono::duration<R,P> interruptible_sleep(const std::chrono::duratio
   return {};
 }
 
-
 template <typename T>
 static T clamp( const T& min, const T& max, const T& val ) {
   return std::min( max, std::max( min, val ) );
 }
-
-class Logger {
-public:
-  virtual ~Logger() = default;
-  template <typename ...Args>
-  inline void info(Args&&... args) {
-    log(LOG_INFO, std::forward<Args>(args)...);
-  }
-  template <typename ...Args>
-  inline void warning(Args&&... args) {
-    log(LOG_WARNING, std::forward<Args>(args)...);
-  }
-  template <typename ...Args>
-  inline void error(Args&&... args) {
-    log(LOG_ERR, std::forward<Args>(args)...);
-  }
-private:
-  virtual void log(int pri, const char* msg) = 0;
-  template <typename ...Args>
-  inline void log(int pri, const char* fmt, const Args& ...args) {
-    char temp[1024];
-    const auto l = snprintf(temp, sizeof(temp), fmt, args...);
-    if (l > -1) {
-      temp[l] = 0;
-      log(pri, temp);
-    }
-  }
-};
-
-class SysLog final : public Logger {
-public:
-  SysLog() {
-    openlog(nullptr, 0, 0);
-  }
-  virtual ~SysLog() override {
-    closelog();
-  }
-private:
-  void log(int pri, const char* msg) override {
-    syslog(pri, "%s", msg);
-  }
-};
-
-class LocalLog final : public Logger {
-public:
-  virtual ~LocalLog() override = default;
-private:
-  static inline const char* prefix(int pri) {
-    return pri == LOG_ERR ?     "[ERROR]" :
-           pri == LOG_WARNING ? "[WARN.]" :
-           pri == LOG_INFO ?    "[INFO.]" :
-                                "[?????]";
-  }
-  void log(int pri, const char* msg) override {
-    std::cout << prefix(pri) << " " << msg << std::endl;
-  }
-};
 
 static inline double linear( double temp ) {
   constexpr auto min = 25.0; // deg
@@ -123,36 +65,32 @@ int main() {
   signal( SIGQUIT, &sig_handler );
   signal( SIGTERM, &sig_handler );
 
-  std::unique_ptr<Logger> log;
+  using Log = LocalLog;
 
-  if (false) {
-    log = std::make_unique<SysLog>();
-  } else {
-    log = std::make_unique<LocalLog>();
-  }
+  Log log;
 
-  grid::controller controller;
+  grid::controller controller(std::nothrow);
 
   if( not controller ) {
-    log->error("cannot access the fan controller");
+    log.error("cannot access the fan controller");
     return 1;
   }
 
   temperature::monitor monitor;
 
   if( not monitor ) {
-    log->error("cannot access the temperature monitor");
+    log.error("cannot access the temperature monitor");
     return 1;
   }
 
   const auto cpu = monitor.find("CPU Temperature");
 
   if( cpu == monitor.end()) {
-    log->error("cannot find the CPU temperature sensor");
+    log.error("cannot find the CPU temperature sensor");
     return 1;
   }
 
-  log->info("started");
+  log.info("started");
 
   using func_t = double (*) (double);
   func_t func = &linear;
@@ -184,7 +122,7 @@ int main() {
           last_p = p;
         }
 
-        log->info("setting fans speed to %d%%", last_p);
+        log.info("setting fans speed to %d%%", last_p);
 
         for (auto& fan : controller) {
           fan.setPercent( last_p );
@@ -199,13 +137,13 @@ int main() {
     {
       if( ++errors == max_errors )
       {
-        log->error("exception caught: %s", ex.what());
-        log->error("too many errors, giving up");
+        log.error("exception caught: %s", ex.what());
+        log.error("too many errors, giving up");
         stop = true;
       }
       else
       {
-        log->warning("exception caught: %s", ex.what());
+        log.warning("exception caught: %s", ex.what());
 
         interruptible_sleep(5s);
         if (stop) break;
@@ -214,7 +152,7 @@ int main() {
 
         if( not controller )
         {
-          log->error("could not re-initialize the controller");
+          log.error("could not re-initialize the controller");
           stop = true;
         }
       }
@@ -222,7 +160,7 @@ int main() {
   }
 
   if (got_signal)
-    log->info("got signal '%s' (%d)", strsignal(got_signal), got_signal);
+    log.info("got signal '%s' (%d)", strsignal(got_signal), got_signal);
 
-  log->info("terminated");
+  log.info("terminated");
 }

@@ -181,6 +181,13 @@ namespace serial
 		explicit operator bool () const noexcept
 		{ return INVALID_SERIAL != handle; }
 
+    void close()
+    {
+      const std::lock_guard<std::mutex> lock( mutex );
+      serial_close( handle );
+      handle = INVALID_SERIAL;
+    }
+
 		bool write( const void* data, size_t count ) noexcept
 		{
       const std::lock_guard<std::mutex> lock( mutex );
