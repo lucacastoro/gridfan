@@ -19,7 +19,14 @@ using namespace std::chrono_literals;
 
 static bool stop = false;
 static int got_signal = 0;
+static bool verbose_trigger = false;
+static bool verbose = false;
+
 static void sig_handler(int sig) {
+  if (SIGUSR1 == sig) {
+    verbose_trigger = true;
+    return;
+  }
   stop = true;
   got_signal = sig;
 }
@@ -64,6 +71,7 @@ int main() {
   signal( SIGINT, &sig_handler );
   signal( SIGQUIT, &sig_handler );
   signal( SIGTERM, &sig_handler );
+  signal( SIGUSR1, &sig_handler );
 
   using Log = LocalLog;
 
@@ -103,6 +111,12 @@ int main() {
 
   while( not stop ) {
 
+    if (verbose_trigger) {
+      verbose_trigger = false;
+      verbose = not verbose;
+      log.info("verbose mode %s", verbose ? "activated" : "deactivated");
+    }
+
     try
     {
       const auto t = cpu->temperature();
@@ -122,7 +136,9 @@ int main() {
           last_p = p;
         }
 
-        log.info("setting fans speed to %d%%", last_p);
+        if (verbose) {
+          log.info("setting fans speed to %d%%", last_p);
+        }
 
         for (auto& fan : controller) {
           fan.setPercent( last_p );
