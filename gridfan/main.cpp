@@ -111,16 +111,20 @@ int main() {
 
   while( not stop ) {
 
-    if (verbose_trigger) {
-      verbose_trigger = false;
-      verbose = not verbose;
-      log.info("verbose mode %s", verbose ? "activated" : "deactivated");
-    }
-
     try
     {
       const auto t = cpu->temperature();
       const auto p = int( func( t ) );
+
+      if (verbose_trigger) {
+        verbose_trigger = false;
+        verbose = not verbose;
+        log.info("verbose mode %s", verbose ? "activated" : "deactivated");
+        if (verbose) {
+          log.info("current temperature is %.2f degree", t);
+          log.info("current speed is %d%%", p);
+        }
+      }
 
       // changes in fan speed are triggered only if either
       // - desired speed is higher than current speed
