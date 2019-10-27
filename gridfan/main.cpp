@@ -73,7 +73,7 @@ int main() {
   signal( SIGTERM, &sig_handler );
   signal( SIGUSR1, &sig_handler );
 
-  using Log = LocalLog;
+  using Log = SysLog;
 
   Log log;
 

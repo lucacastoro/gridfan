@@ -9,8 +9,8 @@ It is composed of 2 parts, a dynamic library `libgridfan.so` exposing the actual
 - Q: Why the serial file implementation is in C?
 - A: I reused an old library I wrote years ago when I used to play around with Arduino, at the time C89 was my language of choice.
 - Q: And why there is a Win32 implementation as well?
-- A: Because at the time I was still mostly a Windows user.
-- Q: Does this thing work on Win32 as well?
+- A: Because at the time I was still mostly a Windows user, and I wanted the library to be crossplatform.
+- Q: Does this thing work on Windows as well?
 - A: No, `libsensors` (see below the [Dependencies](#deps) section) is not available on Windows (AFAICT). Maybe it could be possible to build the project using [MinGW](http://www.mingw.org/) but I haven't tried.
 
 ## Requirements
@@ -51,8 +51,10 @@ Currently the fan speed correction is done with a very simple algorithm that map
 The temperature is checked periodaically every second and the speed adjustment is performed on all 6 fans.
 
 ## Usage
-The process cannot be configured, it takes no arguments and produces no output, every time it performs a fan speed adjustment it logs it via syslog (identifier = `gridfan`). 
-It can be started either manually or via `systemctl`.
+The process cannot be configured, it takes no arguments and produces no output but the logs.  
+Log messages are emitted via syslog (identifier = `gridfan`), by default the process produces very little logs, but sending it the SIGUSR1 signal will put it in a "verbose" mode so that every time it performs a fan speed adjustment it gets logged.  
+Receiving again the SIGUSR1 signal will deactivate the verbose mode.  
+It can be started either manually or as a systemd service (`systemctl enable gridfan; systemctl start gridfan`).
 
 ## Device access
 When using the process through `systemctl` there will be no need for other configurations as the process will run as `root` but if you're willing to run the process as an unproviledged user you'll need to grant that user permissions to read and write the fan bus serial virtual file, please follow the [INSTRUCTIONS](https://github.com/CapitalF/gridfan/blob/master/README.txt) to configure your system properly.
