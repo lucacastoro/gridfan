@@ -51,9 +51,11 @@ static T clamp( const T& min, const T& max, const T& val ) {
 }
 
 static inline double linear( double temp ) {
-  constexpr auto min = 25.0; // deg
-  constexpr auto max = 70.0; // deg
-  return clamp( 0, 100, int( ( temp - min ) * 100.0 / ( max - min ) ) );
+  constexpr auto min_tmp = 25.0; // deg
+  constexpr auto max_tmp = 70.0; // deg
+  constexpr auto min_spd = 10;   // %
+  constexpr auto max_spd = 100;  // %
+  return clamp( min_spd, max_spd, int( ( temp - min_tmp ) * 100.0 / ( max_tmp - min_tmp ) ) );
 };
 
 static inline double softplus( double x )
