@@ -1,0 +1,7 @@
+---
+logger: syslog
+algorithm: linear
+max_speed: 100 # %
+min_speed: 25 # %
+max_temp: 70 # deg
+min_tmp: 25 # deg

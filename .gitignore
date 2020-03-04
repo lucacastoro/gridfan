@@ -42,4 +42,7 @@ target_wrapper.*
 # QtCreator CMake
 CMakeLists.txt.user*
 
+# Vim
+*.swp
+
 /build

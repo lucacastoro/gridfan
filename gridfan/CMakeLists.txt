@@ -7,6 +7,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 include_directories(../libgridfan)
 
 add_executable(${PROJECT_NAME} main.cpp temperature.cpp)
-target_link_libraries(${PROJECT_NAME} ${LIBSENSORS} lib${PROJECT_NAME})
+target_link_libraries(${PROJECT_NAME} ${LIBSENSORS} yaml-cpp gflags::gflags lib${PROJECT_NAME})
 
 install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION bin)
