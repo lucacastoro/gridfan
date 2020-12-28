@@ -46,34 +46,32 @@ static std::chrono::duration<R,P> interruptible_sleep(const std::chrono::duratio
 }
 
 template <typename T>
-static T clamp( const T& min, const T& max, const T& val ) {
-  return std::min( max, std::max( min, val ) );
+static T clamp(const T& min, const T& max, const T& val) {
+  return std::min(max, std::max(min, val));
 }
 
-static inline double linear( double temp ) {
-  constexpr auto min_tmp = 25.0; // deg
-  constexpr auto max_tmp = 70.0; // deg
-  constexpr auto min_spd = 10;   // %
-  constexpr auto max_spd = 100;  // %
-  return clamp( min_spd, max_spd, int( ( temp - min_tmp ) * 100.0 / ( max_tmp - min_tmp ) ) );
+static inline double linear(double temp) {
+  constexpr auto min_tmp = 30.0;  // deg
+  constexpr auto max_tmp = 75.0;  // deg
+  constexpr auto min_spd = 20.0;  // %
+  constexpr auto max_spd = 100.0; // %
+  return clamp(min_spd, max_spd, min_spd + (max_spd - min_spd) / (max_tmp - min_tmp) * (temp - min_tmp));
 };
 
-static inline double softplus( double x )
-{
-  return log1p( exp( x ) );
+static inline double softplus(double x) {
+  return log1p(exp(x));
 }
 
-static inline double logistic( double x )
-{
-  return 1.0 / ( 1.0 + exp( -x ) );
+static inline double logistic(double x) {
+  return 1.0 / (1.0 + exp(-x));
 }
 
 int main() {
 
-  signal( SIGINT, &sig_handler );
-  signal( SIGQUIT, &sig_handler );
-  signal( SIGTERM, &sig_handler );
-  signal( SIGUSR1, &sig_handler );
+  signal(SIGINT,  &sig_handler);
+  signal(SIGQUIT, &sig_handler);
+  signal(SIGTERM, &sig_handler);
+  signal(SIGUSR1, &sig_handler);
 
   using Log = SysLog;
 
@@ -81,21 +79,21 @@ int main() {
 
   grid::controller controller(std::nothrow);
 
-  if( not controller ) {
+  if(not controller) {
     log.error("cannot access the fan controller");
     return 1;
   }
 
   temperature::monitor monitor;
 
-  if( not monitor ) {
+  if(not monitor) {
     log.error("cannot access the temperature monitor");
     return 1;
   }
 
   const auto cpu = monitor.find("CPU Temperature");
 
-  if( cpu == monitor.end()) {
+  if(cpu == monitor.end()) {
     log.error("cannot find the CPU temperature sensor");
     return 1;
   }
@@ -111,12 +109,11 @@ int main() {
   size_t errors = 0;
   constexpr size_t max_errors = 5;
 
-  while( not stop ) {
+  while(not stop) {
 
-    try
-    {
+    try {
       const auto t = cpu->temperature();
-      const auto p = int( func( t ) );
+      const auto p = int(func(t));
 
       if (verbose_trigger) {
         verbose_trigger = false;
@@ -131,40 +128,37 @@ int main() {
       // changes in fan speed are triggered only if either
       // - desired speed is higher than current speed
       //                     or
-      // - desired speed is *way* lower than current speed (5%)
+      // - desired speed is "way" lower than current speed (5%)
 
-      if( p > last_p or last_p - p > 5 ) {
+      if(p > last_p or last_p - p > 5) {
         // if desired speed is lower than current speed, slowly decrease it
         // at a maximum rate of -10% per second
-        if( p < last_p ) {
-          last_p = std::max( p, last_p - 10 );
+        if(p < last_p) {
+          last_p = std::max(p, last_p - 10);
         } else {
           last_p = p;
         }
 
         if (verbose) {
-          log.info("setting fans speed to %d%%", last_p);
+          log.info("temp is %.1f deg, setting fans speed to %d%%", t, last_p);
         }
 
         for (auto& fan : controller) {
-          fan.setPercent( last_p );
+          fan.setPercent(last_p);
         }
       }
 
       errors = 0;
       interruptible_sleep(interval);
       if (stop) break;
-    }
-    catch( const std::exception& ex )
-    {
-      if( ++errors == max_errors )
-      {
+
+    } catch(const std::exception& ex) {
+
+      if(++errors == max_errors) {
         log.error("exception caught: %s", ex.what());
         log.error("too many errors, giving up");
         stop = true;
-      }
-      else
-      {
+      } else {
         log.warning("exception caught: %s", ex.what());
 
         interruptible_sleep(5s);
@@ -172,8 +166,7 @@ int main() {
 
         controller = grid::controller();
 
-        if( not controller )
-        {
+        if(not controller) {
           log.error("could not re-initialize the controller");
           stop = true;
         }
@@ -181,8 +174,9 @@ int main() {
     }
   }
 
-  if (got_signal)
+  if (got_signal) {
     log.info("got signal '%s' (%d)", strsignal(got_signal), got_signal);
+  }
 
   log.info("terminated");
 }
